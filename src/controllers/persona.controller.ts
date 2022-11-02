@@ -82,7 +82,7 @@ export class PersonaController {
   persona.clave = claveCifrada;
   let p = await this.personaRepository.create(persona);
 
-  //notificar al usuario por correo
+  //notificar al usuario por correo y sms
   let destino = persona.correo;
   let asunto = 'Registro en la plataforma';
   let contenido = `Hola ${persona.nombres}, su nombre de usuario es: ${persona.correo} y su contraseña es: ${clave}`;//comilla inclinada
@@ -93,15 +93,7 @@ export class PersonaController {
     .then((data: any) =>{
       console.log(data);
     })
-    return p;
-
-  //notificar al usuario por sms
-  
-  
-    
-  
-
-
+    return p;  
 
   }
 
