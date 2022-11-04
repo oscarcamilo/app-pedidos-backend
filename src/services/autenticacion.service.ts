@@ -28,6 +28,8 @@ export class AutenticacionService {
     return claveCifrada;
   }
 
+ 
+
   IdentificarPersona(usuario: string, clave: string){
     try{
       let p = this.personaRepository.findOne({where: {correo:usuario, clave: clave}});
@@ -62,4 +64,6 @@ export class AutenticacionService {
     }
 
   }
+  
+  
 }

@@ -20,7 +20,7 @@ import {
   HttpErrors,
 } from '@loopback/rest';
 import { Llaves } from '../config/llaves';
-import {Credenciales, Persona} from '../models';
+import {Credenciales, Persona, ResetearClave} from '../models';
 import {PersonaRepository} from '../repositories';
 import { AutenticacionService } from '../services';
 const fetch = require('node-fetch');
@@ -87,15 +87,16 @@ export class PersonaController {
   let asunto = 'Registro en la plataforma';
   let contenido = `Hola ${persona.nombres}, su nombre de usuario es: ${persona.correo} y su contraseña es: ${clave}`;//comilla inclinada
   let destinoSms = persona.celular;
-  let contenidoSms = `Hola ${persona.nombres}, su nombre de usuario es: ${persona.correo} y su contraseña es: ${clave}`;
-  fetch(`${Llaves.urlServicioNotificaciones}/envio-correo?correo-destino=${destino}&asunto=${asunto}&contenido=${contenido}`)
-  fetch(`${Llaves.urlServicioNotificaciones}/sms?telefono=${destinoSms}&mensaje=${contenidoSms}`)
+  
+  fetch(`${Llaves.urlServicioNotificaciones}/correo-electronico?destino=${destino}&asunto=${asunto}&contenido=${contenido}`)
+  fetch(`${Llaves.urlServicioNotificaciones}/sms?telefono=${destinoSms}&mensaje=${contenido}`)
     .then((data: any) =>{
       console.log(data);
     })
     return p;  
-
   }
+
+  
 
   @get('/personas/count')
   @response(200, {
@@ -143,7 +144,7 @@ export class PersonaController {
     @param.where(Persona) where?: Where<Persona>,
   ): Promise<Count> {
     return this.personaRepository.updateAll(persona, where);
-  }
+  }  
 
   @get('/personas/{id}')
   @response(200, {
@@ -196,5 +197,46 @@ export class PersonaController {
   })
   async deleteById(@param.path.string('id') id: string): Promise<void> {
     await this.personaRepository.deleteById(id);
+  }
+
+  
+  @post('/recuperarPassword')
+  @response(200, {
+    content: { 'application/json': { schema: getModelSchemaRef(ResetearClave) } },
+  })
+  async resetPassword(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(ResetearClave),
+
+        },
+      },
+    })
+    resetearClave: ResetearClave,
+  ): Promise<Object> {
+
+    let persona = await this.personaRepository.findOne({ where: {correo: resetearClave.mail } })
+    if (!persona) {
+      throw new HttpErrors[401]("Este usuario no existe");
+    }
+    let clave = this.servicioAutenticacion.GenerarClave();
+    let claveCifrada = this.servicioAutenticacion.CifrarClave(clave);
+    persona.clave = claveCifrada;
+    await this.personaRepository.update(persona);
+
+    //notificar al usuario por sms
+
+    let contenido = `Hola ${persona.nombres}, su nueva contraseña es: ${clave}`;
+    let destinoSms = persona.celular;
+
+    fetch(`${Llaves.urlServicioNotificaciones}/sms?telefono=${destinoSms}&mensaje=${contenido}`)
+      .then((data: any) => {
+        console.log(data);
+      })
+    return {
+      envio: "OK"
+    };
+
   }
 }
